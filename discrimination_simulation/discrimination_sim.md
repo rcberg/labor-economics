@@ -34,7 +34,9 @@ have the same innate ability as the rest of the population.
 The model is thus:
 
 *C*<sub>*i*</sub> = *μ*<sub>*c*</sub> + *β*<sub>*D*</sub>*D*<sub>*i*</sub> + *β*<sub>*A*</sub>*A*<sub>*i*</sub> + *ϵ*<sub>*i*</sub>
+
 *w*<sub>*i*</sub> = *μ*<sub>*w*</sub> + *α*<sub>*C*</sub>*C*<sub>*i*</sub> + *α*<sub>*A*</sub>*A*<sub>*i*</sub> + *ν*<sub>*i*</sub>
+
 \[**Note, we are ruling-out a channel from wages back to
 status/standing.** Including such a link would of course produce a
 reduced-form dependency of (*w* , *C*) on (*D* , *A*).\]
