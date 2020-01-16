@@ -17,11 +17,11 @@ The purpose of this simulation (inspired by a similar simulation done in Stata b
 
 # Data Generating Process
 
-Let's consider a situation in which wages depend on **unobserved** ability $A_i$ and some measure of status $C_i$. Ability further affects this standing as well, but so does discrimination $D_i$. For individuals facing discrimination ($D_i = 1$), standing is otherwise lower than it would be if they were a "non-oppressed"-type. an important point is, regardless of how one interprets the model, ability affects both status/standing as well as wages on the job-- no matter who you are, if you have higher ability you can get a better job *and* get paid more.
+Let's consider a situation in which wages depend on **unobserved** ability $A_i$ and some measure of status $C_i$. Ability further affects this standing as well, but so does discrimination $D_i$. For individuals facing discrimination ($D_i = 1$), standing is otherwise lower than it would be if they were a "non-oppressed"-type. an important point is, regardless of how one interprets the model, ability affects both status/standing as well as wages on the job-- no matter who you are, if you have higher ability you can get a better job *and* get paid more. Remember-- our fictitious econometrician *can't* see or include this in their regressions.
 
 In practice, this could perhaps be the labor market for science or engineering; fields where women have faced sexism and unwelcomeness from the academy. In this case $C_i$ would be some measure of "education status," and women would be less inclined ($\bar C_D < \bar C$ where $\bar C_D$ is the group average education for the discriminated group) to achieve educational standing in these fields. Alternatively $C_i$ could represent some measure of "occupational standing" where under-represented groups are more-inclined to be "shut-out" from higher-status jobs, even if they have the same innate ability as the rest of the population.
 
-The model is thus:
+With that said, our model is:
 
 $$ C_i = \mu_c + \beta_D D_i + \beta_A A_i + \epsilon_i$$
 $$ w_i = \mu_w + \alpha_C C_i + \alpha_A A_i + \nu_i$$

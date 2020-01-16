@@ -387,9 +387,9 @@ $(document).ready(function () {
 </div>
 <div id="data-generating-process" class="section level1">
 <h1>Data Generating Process</h1>
-<p>Let’s consider a situation in which wages depend on <strong>unobserved</strong> ability <span class="math inline">\(A_i\)</span> and some measure of status <span class="math inline">\(C_i\)</span>. Ability further affects this standing as well, but so does discrimination <span class="math inline">\(D_i\)</span>. For individuals facing discrimination (<span class="math inline">\(D_i = 1\)</span>), standing is otherwise lower than it would be if they were a “non-oppressed”-type. an important point is, regardless of how one interprets the model, ability affects both status/standing as well as wages on the job– no matter who you are, if you have higher ability you can get a better job <em>and</em> get paid more.</p>
+<p>Let’s consider a situation in which wages depend on <strong>unobserved</strong> ability <span class="math inline">\(A_i\)</span> and some measure of status <span class="math inline">\(C_i\)</span>. Ability further affects this standing as well, but so does discrimination <span class="math inline">\(D_i\)</span>. For individuals facing discrimination (<span class="math inline">\(D_i = 1\)</span>), standing is otherwise lower than it would be if they were a “non-oppressed”-type. an important point is, regardless of how one interprets the model, ability affects both status/standing as well as wages on the job– no matter who you are, if you have higher ability you can get a better job <em>and</em> get paid more. Remember– our fictitious econometrician <em>can’t</em> see or include this in their regressions.</p>
 <p>In practice, this could perhaps be the labor market for science or engineering; fields where women have faced sexism and unwelcomeness from the academy. In this case <span class="math inline">\(C_i\)</span> would be some measure of “education status,” and women would be less inclined (<span class="math inline">\(\bar C_D &lt; \bar C\)</span> where <span class="math inline">\(\bar C_D\)</span> is the group average education for the discriminated group) to achieve educational standing in these fields. Alternatively <span class="math inline">\(C_i\)</span> could represent some measure of “occupational standing” where under-represented groups are more-inclined to be “shut-out” from higher-status jobs, even if they have the same innate ability as the rest of the population.</p>
-<p>The model is thus:</p>
+<p>With that said, our model is:</p>
 <p><span class="math display">\[ C_i = \mu_c + \beta_D D_i + \beta_A A_i + \epsilon_i\]</span> <span class="math display">\[ w_i = \mu_w + \alpha_C C_i + \alpha_A A_i + \nu_i\]</span> [<strong>Note, we are ruling-out a channel from wages back to status/standing.</strong> Including such a link would of course produce a reduced-form dependency of (<span class="math inline">\(w\)</span> , <span class="math inline">\(C\)</span>) on (<span class="math inline">\(D\)</span> , <span class="math inline">\(A\)</span>).]</p>
 </div>
 <div id="simulation-model" class="section level1">
@@ -425,19 +425,19 @@ summary(true_wage)</code></pre>
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -3.9197 -0.6855  0.0054  0.6866  3.7987 
+## -3.6937 -0.6607  0.0051  0.6682  4.1203 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept) 9.998144   0.011003  908.71   &lt;2e-16 ***
-## C           1.993195   0.009016  221.08   &lt;2e-16 ***
-## ability     2.020724   0.020680   97.71   &lt;2e-16 ***
+## (Intercept) 9.991789   0.010911  915.77   &lt;2e-16 ***
+## C           1.985766   0.008841  224.61   &lt;2e-16 ***
+## ability     2.017155   0.020288   99.43   &lt;2e-16 ***
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
-## Residual standard error: 1.013 on 9997 degrees of freedom
-## Multiple R-squared:  0.9757, Adjusted R-squared:  0.9757 
-## F-statistic: 2.007e+05 on 2 and 9997 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Residual standard error: 0.9922 on 9997 degrees of freedom
+## Multiple R-squared:  0.9768, Adjusted R-squared:  0.9768 
+## F-statistic: 2.108e+05 on 2 and 9997 DF,  p-value: &lt; 2.2e-16</code></pre>
 <p>As we can clearly see, it correctly estimates the DGP for wages.</p>
 <p>What about an econometrician tasked with measuring discriminatory wage gaps? Their first instinct might be to look at the raw wage gap between the discriminated group and the rest of the population by regressing wages on an indicator for being in the discriminated class:</p>
 <pre class="r"><code>ecms_wage = lm(wage ~ discrimination ) # non-Godly regression
@@ -449,18 +449,18 @@ summary(ecms_wage)</code></pre>
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -23.5882  -4.3587  -0.0094   4.3898  22.9730 
+## -22.5123  -4.4375  -0.0094   4.2955  22.8203 
 ## 
 ## Coefficients:
 ##                Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)    10.04947    0.09031  111.28   &lt;2e-16 ***
-## discrimination -2.13167    0.12818  -16.63   &lt;2e-16 ***
+## (Intercept)    10.00524    0.09072   110.3   &lt;2e-16 ***
+## discrimination -1.95920    0.12888   -15.2   &lt;2e-16 ***
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
-## Residual standard error: 6.409 on 9998 degrees of freedom
-## Multiple R-squared:  0.02692,    Adjusted R-squared:  0.02682 
-## F-statistic: 276.6 on 1 and 9998 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Residual standard error: 6.444 on 9998 degrees of freedom
+## Multiple R-squared:  0.02259,    Adjusted R-squared:  0.02249 
+## F-statistic: 231.1 on 1 and 9998 DF,  p-value: &lt; 2.2e-16</code></pre>
 <p>This correctly estimates what you’d if you plugged-in the status variable into wage, and estimated the effect of discrimination. This is what the media might quote as the “discrimination gap”– the mean difference in earnings between the discriminated and non-discriminated class.</p>
 <p>What if someone told the econometrician “Actually, members of the discriminated class simply <em>appear</em> to have a lower wage, but they just <em>choose</em> to [not get a high-status education; go into a high-status occupation; etc.] so you have to control for <span class="math inline">\(C_i\)</span>!” Suppose, then, the econometrician estimates the wage equation with <span class="math inline">\(C_i\)</span> included.</p>
 <pre class="r"><code>ecms_wage_bad = lm(wage ~ discrimination + C) 
@@ -472,19 +472,19 @@ summary(ecms_wage_bad)</code></pre>
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -5.2837 -0.9277  0.0152  0.9190  5.7557 
+## -5.4957 -0.9061 -0.0066  0.9058  5.2101 
 ## 
 ## Coefficients:
-##                Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)    9.988026   0.019211  519.92   &lt;2e-16 ***
-## discrimination 0.787619   0.027997   28.13   &lt;2e-16 ***
-## C              2.800408   0.006097  459.31   &lt;2e-16 ***
+##                 Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)    10.036890   0.019011  527.96   &lt;2e-16 ***
+## discrimination  0.749051   0.027627   27.11   &lt;2e-16 ***
+## C               2.788239   0.005976  466.54   &lt;2e-16 ***
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
-## Residual standard error: 1.363 on 9997 degrees of freedom
-## Multiple R-squared:  0.956,  Adjusted R-squared:  0.956 
-## F-statistic: 1.085e+05 on 2 and 9997 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Residual standard error: 1.35 on 9997 degrees of freedom
+## Multiple R-squared:  0.9571, Adjusted R-squared:  0.9571 
+## F-statistic: 1.115e+05 on 2 and 9997 DF,  p-value: &lt; 2.2e-16</code></pre>
 <p>We’ve estimated a <em>positive</em> effect of being in a discriminated group! But this clearly isn’t right because as the Gods of this simulation we <strong>know</strong> that this is false.</p>
 <p>This illustrates what happens when one <em>conditions on a “collider.”</em> Here, <span class="math inline">\(C_i\)</span> (education; occupation; etc) is called a “collider” (see Scott Cunningham’s <em>Mixtape</em> for a deeper treatment). The intuitive reason behind this bias is that we could’ve conditioned on status <em>or</em> a dummy for discriminated group membership, but when we include both, we force our model to compare discriminated and non-discriminated individuals with the same fixed level of status <span class="math inline">\(\tilde C\)</span>. Yet, we know that the only individuals who face discrimination but could get the same <span class="math inline">\(\tilde C\)</span> as the non-discriminated, are those who have a much higher average ability than the non-discriminated group… but these are the very people who also receive a higher wage! In this light, we can recognize “it”collider conditioning&quot; as a self-inflicted form of selection bias.</p>
 </div>
