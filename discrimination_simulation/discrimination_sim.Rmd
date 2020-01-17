@@ -1,5 +1,5 @@
 ---
-title: "Discrimination simulation"
+title: "Problems with estimating discrimination: A simulation"
 author: "Chris Berg"
 date: "1/15/2020"
 output: 
@@ -93,7 +93,7 @@ We've estimated a *positive* effect of being in a discriminated group! But this 
 
 This illustrates what happens when one *conditions on a "collider."* Here, $C_i$ (education; occupation; etc) is called a "collider" (see Scott Cunningham's *Mixtape* for a deeper treatment of what colliders are). 
 
-The intuitive reason behind this bias is that we could've conditioned on status *or* a dummy for discriminated group membership, but when we include both, we force our model to compare discriminated and non-discriminated individuals with the same fixed level of status $\tilde C$. This level is indicated in the density plot below with the blue vertical line, which for convenience is chosen as the mean of the non-discriminated status level.
+The intuitive reason behind this bias is that we could've conditioned on status *or* a dummy for discriminated group membership, but including both is forcing ourselves to compare discriminated and non-discriminated individuals with the same fixed level of status $\tilde C$. This level is indicated in the density plot below with the blue vertical line, which for convenience is chosen as the mean of the non-discriminated status level.
 
 ```{r fig1, dpi=200}
 chris_theme =  theme( panel.background = element_rect( fill = 'white' ) , 
@@ -119,7 +119,7 @@ h + geom_density(alpha = 0.6) +
   chris_theme
 ```
 
-The first thing worth keeping in mind is that most of the variation in status $C$ comes from variation in ability, which is distributed independently of discrimination. Our fixed $\tilde C$ intersects the distribution of discriminated individuals' status much "further right" in their distribution, implying those discriminated individuals with a status equal to the mean of the non-discriminated mostly have higher ability. In other words, the only individuals who face discrimination that could get the same $\tilde C$ as the non-discriminated are those who have a higher average ability than the non-discriminated group!
+The first thing worth keeping in mind is that most of the variation in status $C$ comes from variation in ability, which is distributed independently of discrimination. Our fixed $\tilde C$ intersects the distribution of discriminated individuals' status much "further to the right" in their distribution, implying those discriminated individuals with a status equal to $\tilde C$ have higher ability. In other words, the only individuals who face discrimination that could get the same $\tilde C$ as the non-discriminated (other than random variation in $C$), are those who have a higher average ability than the non-discriminated group.
 
 ...But these are the very people who also receive a higher wage! To see this, look at the scatterplot below of wages on status-- with color-coding by whether the individual is discriminated-against or not.
 
@@ -155,7 +155,7 @@ g + geom_point(alpha = 0.6) +
 chris_theme
 ```
 
-Horizontal lines added to highlight the respective group means, and show that the discriminated group indeed receives a lower wage. Even though it might not be completely clear at first glance, a careful observer might see that for a given occupational level, indeed, the discriminated group has a higher wage! Below, the full scatter plot has been replaced with two simple density contours for each group, and a line at an arbitrary "status" level ($=-1$).
+Horizontal lines added to highlight the respective group means, and show that the discriminated group indeed receives a lower average wage. A discerning observer might also see that *for a given occupational level,* the discriminated group has a *higher* average wage! To see this clearly, let's zoom-in on these data a bit and replace the full scatter plot with two equivalent density contours for the non-/discriminated, and add a line at an arbitrary "status" level (here $-1$).
 
 ```{r fig3, dpi = 200}
 p = ggplot()
@@ -185,6 +185,6 @@ p + geom_density_2d(data = plot_df %>% filter( D == 1) ,
                                     color = 'grey'))
 ```
 
-Hopefully the figure verifies what seems to be the case in the scatter plot, and what follows from our intuition built-up so far. The only way to observe a discriminated and a non-discriminated individual with the same $C$ (i.e. along the same blue line) is if the non-discriminated individual has a higher ability-- random variation notwithstanding. This is the same thing that causes an individual to have higher wages.
+Hopefully the figure verifies what seems to be the case in the scatter plot, and what follows from our intuition. The only way to observe a discriminated and a non-discriminated individual with the same $C$ (i.e. along the same blue line) is if the non-discriminated individual has a higher ability to compensate-- random variation notwithstanding. This is, of course, also what causes individuals to have higher wages.
 
-So while we can verify from the scatterplot, while discrimination lowers the average wage of the discriminated as a group (equal to the distance between the horizontal lines), conditioning on our status attainment variable (occupational standing, education, etc.) falsely suggests that the discriminated receive *higher* wages. In reality, they must be more skilled the get the same "job"/"degree", but once they achieve it they enjoy a higher return for their skill.
+So while discrimination lowers the average wage of the discriminated as a group (equal to the distance between the horizontal lines of the scatterplot), conditioning on our status attainment variable like occupational standing, education, etc. would falsely suggest that the discriminated receive higher wages. In reality they must be more skilled the get the same "job"/"degree"/etc., but once they achieve it, they enjoy a higher return for their skill.
