@@ -1,5 +1,5 @@
 ---
-title: "Problems with estimating discrimination: A simulation"
+title: "Simulating issues with estimating discrimination"
 author: "Chris Berg"
 date: "1/15/2020"
 output: 
