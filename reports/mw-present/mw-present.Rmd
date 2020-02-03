@@ -25,7 +25,7 @@ knitr::opts_chunk$set(cache = TRUE)
 First let's look at the statutory minimum wage within each state-- from May, 1974 to December, 2019. Each line is a state, and you can hover over them on the graph to see exactly what date you're looking at for which state. You can "hide" states' lines by clicking on it in the legend to the right of the graph, allowing you to do any comparisons you'd be interested in.
 
 ```{r nominal, dpi = 120 ,echo=F}
-nwages_plot = state_mw %>% 
+nwage_plot = state_mw %>% 
   ggplot( aes( x = date , y = nominal_mw , color = statefip) ) +
   geom_line( ) + 
   labs( x = "Date" , 
@@ -34,26 +34,26 @@ nwages_plot = state_mw %>%
         color = "State") +
   christheme
 
-nwages_plotly = ggplotly(nwages_plot)
+nwages_plotly = ggplotly(nwage_plot)
 
 nwages_plotly
 ```
 
 ## Real Minimum Wage Among the United States
 
-Now let's look at how the mininum wage in each state has held up when we adjust them for inflation. Here I am using the Consumer Price Index compiled by the Bureau of Labor Statistics as my measure of inflation.
+Now let's look at how the mininum wage in each state has held up when we adjust them for inflation. Here I am using the Consumer Price Index (compiled by the Bureau of Labor Statistics) relative to the year 2005 as the measure of inflation.
 
 ```{r real, dpi = 120 ,echo=F}
-rwages_plot = state_mw  %>%
+rwage_plot = state_mw  %>%
   ggplot( aes( x = date , y = real_mw , color = statefip) ) +
   geom_line( ) + 
   labs( x = "Date" , 
-        y = "Dollars per hour" , 
+        y = "2005 Dollars per hour" , 
         caption = "(Data gathered from Ben Zipperer's Archives)",
         color = "State") +
   christheme
 
-rwages_plotly = ggplotly(rwages_plot)
+rwages_plotly = ggplotly(rwage_plot)
 
 rwages_plotly
 ```
