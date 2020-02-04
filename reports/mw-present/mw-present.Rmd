@@ -67,7 +67,7 @@ rwages_plotly
 ```
 
 
-## Nominal Minimum Wage Among Local Areas
+## Legal Minimum Wage Among Local Areas
 
 [Beginning in 2003 with San Francisco](https://sfgov.org/olse/minimum-wage-ordinance-mwo) and Santa Fe, even sub-state municipalities have passed their own minimum wages which exceed both their state and federal minimum wages. The graph below charts some of these as they've evolved over the period when local ordinances began to take effect (i.e. 2004 until the present).
 
