@@ -4,7 +4,11 @@ author: "Chris Berg"
 date: "1/15/2020"
 output: 
   html_document:
+    theme: yeti
     code_folding: hide
+    toc: true
+    toc_float: true
+    
 ---
 
 ```{r setup, include=FALSE}
