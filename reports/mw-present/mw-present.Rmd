@@ -99,7 +99,7 @@ rlocalwage_plot = substate_mw %>%
   ggplot( aes(x = date , y = state_real_mw , color = display_name ) )+
   geom_line( ) + 
   labs( x = "Date" , 
-        y = "Dollars per hour" , 
+        y = "2005 Dollars per hour" , 
         caption = "(Data gathered from Ben Zipperer's Archives)",
         color = "Locality") +
   christheme
