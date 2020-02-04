@@ -1,30 +1,38 @@
 ---
-title: "State Minimum Wages"
+title: "US State and Local Minimum Wages"
 author: "Chris Berg"
 date: "2/2/2020"
 output: 
-html_document:
-  theme: yeti
+  html_document:
+    theme: yeti
+    toc: true
+    toc_float: true
+  
 ---
+
 
 ```{r setup,  echo=FALSE}
 library(pacman)
 p_load( tidyverse , 
         plotly )
 state_mw = readRDS("D:/Economics/Projects/labor-economics/data/export/mw_state.rds")
+substate_mw = readRDS("D:/Economics/Projects/labor-economics/data/export/mw_substate.rds")
 
 christheme = theme( panel.background = element_rect( fill = 'white' )  ,
                     panel.grid.major.y = element_line( linetype = 2 , 
                                                        color = 'grey')
                     )
+
 knitr::opts_chunk$set(cache = TRUE)
 ```
+
+The United States of America has had a nationwide minimum wage [since 1938](https://en.wikipedia.org/wiki/Fair_Labor_Standards_Act_of_1938), but in the past fifty years states have widely adopted their own minimum wages that exceed the federal minimum, and a majority of states now have such laws. The charts and graphs here will explore the various minimum wages that exist in the US, and how they've evolved over time. 
 
 ## Legal Minimum Wage Among the United States
 
 First let's look at the statutory minimum wage within each state-- from May, 1974 to December, 2019. Each line is a state, and you can hover over them on the graph to see exactly what date you're looking at for which state. You can "hide" states' lines by clicking on it in the legend to the right of the graph, allowing you to do any comparisons you'd be interested in.
 
-```{r nominal, dpi = 120 ,echo=F}
+```{r nominalstate, dpi = 120 ,echo=F}
 nwage_plot = state_mw %>% 
   ggplot( aes( x = date , y = nominal_mw , color = statefip) ) +
   geom_line( ) + 
@@ -41,9 +49,9 @@ nwages_plotly
 
 ## Real Minimum Wage Among the United States
 
-Now let's look at how the mininum wage in each state has held up when we adjust them for inflation. Here I am using the Consumer Price Index (compiled by the Bureau of Labor Statistics) relative to the year 2005 as the measure of inflation.
+Now let's look at how the mininum wage in each state has held up when we adjust them for inflation. Here I am using the Consumer Price Index (compiled by the Bureau of Labor Statistics) relative to the year 2005 as the measure of inflation (i.e. the wage is expressed in terms equivalent to dollars in 2005).
 
-```{r real, dpi = 120 ,echo=F}
+```{r realstate, dpi = 120 ,echo=F}
 rwage_plot = state_mw  %>%
   ggplot( aes( x = date , y = real_mw , color = statefip) ) +
   geom_line( ) + 
@@ -59,3 +67,44 @@ rwages_plotly
 ```
 
 
+## Nominal Minimum Wage Among Local Areas
+
+[Beginning in 2003 with San Francisco](https://sfgov.org/olse/minimum-wage-ordinance-mwo) and Santa Fe, even sub-state municipalities have passed their own minimum wages which exceed both their state and federal minimum wages. The graph below charts some of these as they've evolved over the period when local ordinances began to take effect (i.e. 2004 until the present).
+
+```{r nominallocal, dpi = 120 , echo = F}
+nlocalwage_plot = substate_mw %>% 
+  mutate( display_name = paste( locality , statefip , sep=", ") %>% as.factor() ) %>%
+  select(date , state_nominal_mw , display_name) %>%
+  ggplot( aes(x = date , y = state_nominal_mw , color = display_name ) )+
+  geom_line( ) + 
+  labs( x = "Date" , 
+        y = "Dollars per hour" , 
+        caption = "(Data gathered from Ben Zipperer's Archives)",
+        color = "Locality") +
+  christheme
+
+nlocalwages_plotly = ggplotly(nlocalwage_plot)
+
+nlocalwages_plotly
+```
+
+## Real Minimum Wage Among Local Areas 
+
+The chart below replicates the chart above, but with the minimum wage adjusted for nationwide inflation-- being expressed in a figure equivalent to dollars in 2005, just like before. 
+
+```{r reallocal, dpi = 120 , echo = F}
+rlocalwage_plot = substate_mw %>% 
+  mutate( display_name = paste( locality , statefip , sep=", ") %>% as.factor() ) %>%
+  select(date , state_real_mw , display_name) %>%
+  ggplot( aes(x = date , y = state_real_mw , color = display_name ) )+
+  geom_line( ) + 
+  labs( x = "Date" , 
+        y = "Dollars per hour" , 
+        caption = "(Data gathered from Ben Zipperer's Archives)",
+        color = "Locality") +
+  christheme
+
+rlocalwages_plotly = ggplotly(rlocalwage_plot)
+
+rlocalwages_plotly
+```
