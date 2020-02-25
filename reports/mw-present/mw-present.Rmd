@@ -74,8 +74,8 @@ rwages_plotly
 ```{r nominallocal, dpi = 120 , echo = F}
 nlocalwage_plot = substate_mw %>% 
   mutate( display_name = paste( locality , statefip , sep=", ") %>% as.factor() ) %>%
-  select(date , state_nominal_mw , display_name) %>%
-  ggplot( aes(x = date , y = state_nominal_mw , color = display_name ) )+
+  select(date , substate_nominal_mw , display_name) %>%
+  ggplot( aes(x = date , y = substate_nominal_mw , color = display_name ) )+
   geom_line( ) + 
   labs( x = "Date" , 
         y = "Dollars per hour" , 
@@ -95,8 +95,8 @@ The chart below replicates the chart above, but with the minimum wage adjusted f
 ```{r reallocal, dpi = 120 , echo = F}
 rlocalwage_plot = substate_mw %>% 
   mutate( display_name = paste( locality , statefip , sep=", ") %>% as.factor() ) %>%
-  select(date , state_real_mw , display_name) %>%
-  ggplot( aes(x = date , y = state_real_mw , color = display_name ) )+
+  select(date , substate_real_mw , display_name) %>%
+  ggplot( aes(x = date , y = substate_real_mw , color = display_name ) )+
   geom_line( ) + 
   labs( x = "Date" , 
         y = "2005 Dollars per hour" , 
