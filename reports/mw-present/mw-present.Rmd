@@ -1,7 +1,7 @@
 ---
 title: "US State and Local Minimum Wages"
 author: "Chris Berg"
-date: "2/2/2020"
+date: "2/25/2020"
 output: 
   html_document:
     theme: yeti
