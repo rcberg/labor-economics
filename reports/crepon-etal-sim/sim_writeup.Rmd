@@ -1,0 +1,524 @@
+---
+title: "Simulating Labor Market Externalities"
+author: "Chris Berg"
+date: "2/24/2020"
+output: 
+  html_document:
+    theme: yeti
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T , 
+                      cache = T )
+
+library(tidyverse)
+```
+
+
+## Background and Summary of Crépon *et. al* (2013) 
+
+High unemployment is usually seen as a policy problem, or symptom of one. Policymakers might thus seek to maintain labor market policies which get people flowing out of the pool of unemployed and into the workforce.  Crépon *et. al* (2013) document the popularity of these policies across Europe. Further, according to OECD statistics, France has one of the highest youth unemployment rates (back-seat to her neighbors, Italy and Spain), and French authorities have responded with policies that encourage private training services to boost job-search skills. 
+
+Crépon *et. al* (2013) point out that these policies might be beneficial to some workers, but-- using a model of labor market search-- also show that this is likely to displace other workers, as increased search vigor by the former group lowers aggregate labor market tightness, and thus the likelihood of a job offer for the latter group. To this latter group, treatment confers an external cost. Econometrically it also lowers the potential outcome for the untreated while raising the potential outcome for the treated, biasing estimation of the treatment effect. 
+
+In particular, such programs would violate the Stable Unit Treatment Value Assumption necessary for causal identification in the potential outcomes framework. To see this, Crépon *et. al* design a randomized controlled trial to test whether the unemployed in a treatment area really do have a lower likelihood of finding a job, by randomizing both the assignment of workers to treatment, as well as which labor markets *any* treatment will be assigned within. Indeed, their results suggest the existence of these externalities, implying a violation of SUTVA. Comparing the effect with labor markets that were never exposed to any treatment, they find that the treatment effect of the labor market policy was biased significantly upwards.
+
+## Simulation setup
+
+Many traditional labor market models isolate one workers' choices from that of al' the others, since everyone in the market takes the market features as given. Crépon *et. al* (2013) modify this assumption with a mechanism that allows exogenously-induced treatment of "search effort" to actually lower the chance that the non-treated find a job.
+
+Based on some key points mentioned in their model, I construct a stripped-down and simplified version of their mechanism, which I'll describe further along. I'll then run the simulation and we can see some of the cool results and features/implications.
+
+### Treatment mechanism
+
+\begin{align*}
+u_i \in 
+\begin{cases}
+u_T \ \text{with probability} \ \pi \\
+u_C \ \text{with probability} \ (1-\pi) \\
+\end{cases}
+\end{align*}
+
+The spirit of the Crépon model is that higher *individual* search effort raises *aggregate* slack in the labor market. $u$ individuals face a probability $\pi$ of being assigned as $u_T$-- which confers a search effort of $e > 1$. Otherwise, they maintain a search effort of $1$ as a control group member. 
+
+### From the individual to the aggregate
+
+In the simulation, after workers get assigned treatment status/effort level, the aggregate search intensity $u_e$ is realized.
+
+$$ u_e = eu_T + u_C > u$$
+
+Along with the number of job vacancies $v$, this aggregate search intensity determines labor market tightness $\theta$:
+
+$$ \theta = \frac{v}{u_e} $$
+
+Take a moment to notice that in a labor market with no treatment exposure... 
+
+$$\bar{\theta} \equiv \frac{v}{u} > \frac{v}{u_e}$$
+
+Since we're given that $m(u_e,v)$ is concave in each of its arguments separately, this tells us that $f(\theta) = m(1,\theta)$ must be a concave function, such that $m(u_e , v)$ is increasing ing $v$. The following simplification satisfies their requirements:
+
+$$f(\theta) = \theta^\alpha$$
+
+...where $\alpha \in \{0,1\}$ ^[Their model puts some unstated restrictions on the values of $(v,e,\alpha)$, to keep $e f(\theta)$ in the unit interval. Because of that, so does this simulation.]
+
+
+### From aggregate effort to individual outcomes 
+
+Untreated individuals apply one unit of effort, and individually accept employment based on the (aggregate) probability $f(\theta)$. Treated individuals apply $e$ units of effort and so accept employment with probability $e f(\theta)$. For untreated individuals in a treated labor market, under our assumptions this equates to:
+
+$$ f(\theta) = \left( \frac{v}{e u_T + u_C} \right)^\alpha $$
+
+Meanwhile, in untreated labor markets, the probability for the same individual of getting a job is simply:
+
+$$ f(\theta') = \left( \frac{v}{u} \right)^\alpha $$
+
+Nonetheless, for treated individuals, $e f(\theta)$ is higher than both cases. However, if naively estimating treatment using a control group pulled from $u_e$, the estimate will clearly be biased upwards.
+
+The last part of the simulation gives each unemployed individual a chance-- based both on their whether they're in a treatment market or not, and their treatment status if they're in such a market-- of getting a job (denoted $y_i = 1$ in the simulation). I concoct a second untreated group (of the same size as the control group) who isn't exposed to treatment at all, and has that associated probability of finding a job ^[It's closer, in execution, to me using my God-simulator power to make "unexposed" (to treatment) clones of each control individual, or a parallel universe version of them. Either way, it's the correct counterfactual].
+
+\begin{align*}
+\text{Pr}(y_i = 1)
+\begin{cases}
+= e\theta^\alpha \ \text{for treated individuals} \\
+= \theta^\alpha \ \text{for control individuals} \\
+= \bar{\theta}^\alpha \ \text{for unexposed individuals}
+\end{cases}
+\end{align*}
+
+## Simulation results
+
+The simulation described above is set-up and run 10,000 times. With each iteration, the (biased) difference between the treated and control individual outcome is computed, as well as the (unbiased) difference between the treated and an unexposed, untreated unit otherwise similar to the control unit. 
+(The simulation code is hidden below).
+
+```{r regulariteration }
+#### you're viewing the raw simulation function code.
+
+iter_function = function(i ,
+                         v = 200 ,
+                         u = 1000 ,
+                         eff = 1.8 ,
+                         p_T =0.3 ,
+                         p_C = 0 ,
+                         alpha = 0.5 ){
+  
+  prob_f = function(x){
+    rbinom(n = u ,
+           size = 1 , 
+           prob = x )
+  }
+  
+  # treatment economy
+  
+  ## "first stage" kind of process were treatment is assigned
+  
+  indiv_treat_df = tibble( 
+    u_t = prob_f(p_T) ,
+    u_c = (1-u_t) , 
+    effort = eff*u_t + u_c
+  )
+  
+  ## aggregates calculated from "first stage"
+  
+  agg_treat_df = indiv_treat_df %>%
+    summarise( n_treat = sum(u_t) , 
+               u_e = sum(effort) ) %>%
+    mutate( theta = v / u_e ,
+            p_y = theta^alpha ,
+            exit_T = eff*p_y , 
+            exit_C = p_y , 
+            exit_C_untreated = (v/u)^alpha )
+  
+  ## now that we have aggregates, generate job matches based on (aggregate) probability of matching
+  
+  treat_df = indiv_treat_df %>% 
+    mutate( y = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C) ,
+            y_counter = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C_untreated)
+    )
+  
+  ## compute all of the outomes
+  
+  treat_outcomes = tibble( treated =
+                             treat_df %>%
+                             filter( u_t == 1 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           treated_rate = treated / agg_treat_df$n_treat ,
+                           untreated = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           untreated_counter = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y_counter) ) %>% 
+                             as.numeric() ,
+                           untreated_rate = untreated / (u - agg_treat_df$n_treat ) ,
+                           untreated_counter_rate = untreated_counter / (u - agg_treat_df$n_treat )
+  )
+  
+  ## treatment effects
+  
+  treatment_effects = tibble( biased = (treat_outcomes$treated_rate - treat_outcomes$untreated_rate) ,
+                              unbiased = (treat_outcomes$treated_rate - treat_outcomes$untreated_counter_rate) ,
+                              lm_biased = summary(
+                                lm( data = treat_df , 
+                                    formula = y ~ u_t ))[["coefficients"]]["u_t","Estimate"] ,
+                              lm_unbiased = summary(
+                                lm( data = treat_df , 
+                                    formula = y_counter ~ u_t ))[["coefficients"]]["u_t","Estimate"] ,
+                              iteration = i
+                              
+  )
+  treatment_effects
+  
+}
+
+iter_df = map_df(1:10000 , iter_function )
+
+```
+
+Evaluating the model at $v = 200$ ; $u = 1000$ ; $e = 1.8$ ; $\pi =0.3$ ; and $\alpha = 0.5$, below are the density plots for coefficient estimates from regressions of job attainment on a dummy for treatment.
+
+```{r iterationplots }
+iter_df_plot = ggplot( data = iter_df ) + 
+  geom_density(  aes( x = lm_biased ) ,
+                 fill = '#F8766D' ,
+                 color = '#F8766D' ,
+                 alpha = 0.6) +  
+  geom_density(  aes( x = lm_unbiased ) ,
+                 fill = '#00BFC4' ,
+                 color = '#00BFC4' ,
+                 alpha = 0.6) + 
+  geom_vline( xintercept = mean(iter_df$lm_unbiased) , 
+              color = '#00BFC4' ) + 
+  labs( x = "Estimate" , 
+        y = "Density" , 
+        caption =  "(Distribution of biased estimates in red. Line is at the mean of unbiased estimates.)" ) + 
+  theme( panel.background = element_rect( fill = 'white'))
+
+iter_df_plot
+```
+
+This is conceptually similar to what Crépon *et. al* do, except their pooled reduced-form is set-up to estimate the difference more directly. Since I have the true counterfactual on-hand, I dispense with setting-up the regressions in the exact way they do.
+
+### Varying the probability of treatment
+
+Crépon *et. al* specify their regression with dummies corresponding to the treatment intensity (fraction of the market eligible for treatment) in the labor market. Again, since I am creating the data-generating process, I can dispense with this and show the difference between the biased and unbiased estimator drawn at each probability.
+
+```{r varyingprob}
+### you're viewing the raw code for the simulation at different probabilities
+
+treat_prob_fn = function( x ,
+                          v = 200 ,
+                          u = 1000 ,
+                          eff = 1.8 ,
+                          p_C = 0 ,
+                          alpha = 0.5 ){
+  prob_f = function(x){
+  rbinom(n = u ,
+         size = 1 , 
+         prob = x )
+}
+
+  set.seed(53217) 
+  # treatment economy
+  
+  ## "first stage" kind of process were treatment is assigned
+  p_T = x
+  
+  indiv_treat_df = tibble( 
+    u_t = prob_f(p_T) ,
+    u_c = (1-u_t) , 
+    effort = eff*u_t + u_c
+  )
+  
+  ## aggregates calculated from "first stage"
+  
+  agg_treat_df = indiv_treat_df %>%
+    summarise( n_treat = sum(u_t) , 
+               u_e = sum(effort) ) %>%
+    mutate( theta = v / u_e ,
+            p_y = theta^alpha ,
+            exit_T = eff*p_y , 
+            exit_C = p_y , 
+            exit_C_untreated = (v/u)^alpha )
+  
+  ## now that we have aggregates, generate job matches based on (aggregate) probability of matching
+  
+  treat_df = indiv_treat_df %>% 
+    mutate( y = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C) ,
+            y_counter = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C_untreated)
+    )
+  
+  ## compute all of the outomes
+  
+  treat_outcomes = tibble( treated =
+                             treat_df %>%
+                             filter( u_t == 1 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           treated_rate = treated / agg_treat_df$n_treat ,
+                           untreated = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           untreated_counter = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y_counter) ) %>% 
+                             as.numeric() ,
+                           untreated_rate = untreated / (u - agg_treat_df$n_treat ) ,
+                           untreated_counter_rate = untreated_counter / (u - agg_treat_df$n_treat )
+  )
+  
+  ## treatment effects
+  
+  treatment_effects = tibble( biased = (treat_outcomes$treated_rate - treat_outcomes$untreated_rate) ,
+                              unbiased = (treat_outcomes$treated_rate - treat_outcomes$untreated_counter_rate) ,
+                              prob = p_T
+  )
+  treatment_effects
+}
+
+varying_prob = map_df(seq(0.01, 0.99, 0.01) , 
+                      treat_prob_fn )
+```
+
+Below, the plot shows how the bias grows as we increase the probability of treatment. I have fixed the values to be the same as above, only now $\pi$ is allowed to vary as shown. (In this case, I just simplify to using a difference-in-means, in the spirit of the Rubin causal model.)
+
+```{r varyingprob-plot }
+varying_prob_plot = ggplot( data = varying_prob ) + 
+  geom_line( aes(x = prob , y = biased ) , 
+             color = 'red' , 
+             size = 1) + 
+  geom_line(aes(x = prob , y = unbiased)  , 
+            size = 1) + 
+  theme( panel.background = element_rect( fill = 'white') , 
+         panel.grid = element_line( linetype = 2 , 
+                                    color = 'grey' )) + 
+  labs( x = "Probability of treatment" , 
+        y = "Point estimate", 
+        caption = "(Red line indicates the biased estimator.)")
+
+varying_prob_plot
+```
+
+### Varying treatment intensity
+
+Similar to when I varied the probability of treatment, we should also see the bias increase with how high I set the treatment intensity-- in this case, the search intensity/productivity $e$.
+
+```{r varyingeff }
+
+treat_eff_fn = function( x ,
+                          v = 100 ,
+                          u = 1000 ,
+                          p_T = 0.3 ,
+                          p_C = 0 ,
+                          alpha = 0.5 ){
+  
+  prob_f = function(x){
+  rbinom(n = u ,
+         size = 1 , 
+         prob = x )
+  }
+  
+  set.seed(53217) 
+  # treatment economy
+  
+  ## "first stage" kind of process were treatment is assigned
+  eff = x
+  
+  indiv_treat_df = tibble( 
+    u_t = prob_f(p_T) ,
+    u_c = (1-u_t) , 
+    effort = eff*u_t + u_c
+  )
+  
+  ## aggregates calculated from "first stage"
+  
+  agg_treat_df = indiv_treat_df %>%
+    summarise( n_treat = sum(u_t) , 
+               u_e = sum(effort) ) %>%
+    mutate( theta = v / u_e ,
+            p_y = theta^alpha ,
+            exit_T = eff*p_y , 
+            exit_C = p_y , 
+            exit_C_untreated = (v/u)^alpha )
+  
+  ## now that we have aggregates, generate job matches based on (aggregate) probability of matching
+  
+  treat_df = indiv_treat_df %>% 
+    mutate( y = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C) ,
+            y_counter = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C_untreated)
+    )
+  
+  ## compute all of the outomes
+  
+  treat_outcomes = tibble( treated =
+                             treat_df %>%
+                             filter( u_t == 1 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           treated_rate = treated / agg_treat_df$n_treat ,
+                           untreated = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           untreated_counter = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y_counter) ) %>% 
+                             as.numeric() ,
+                           untreated_rate = untreated / (u - agg_treat_df$n_treat ) ,
+                           untreated_counter_rate = untreated_counter / (u - agg_treat_df$n_treat )
+  )
+  
+  ## treatment effects
+  
+  treatment_effects = tibble( biased = (treat_outcomes$treated_rate - treat_outcomes$untreated_rate) ,
+                              unbiased = (treat_outcomes$treated_rate - treat_outcomes$untreated_counter_rate) ,
+                              effort = eff
+  )
+  treatment_effects
+}
+
+varying_eff = map_df(seq(1.1, 4, 0.1) , 
+                      treat_eff_fn )
+```
+
+Below we can see that as the treatment intensity increases, so does the bias of the estimator.  To vary treatment intensity, I lowered $v=100$ due to restrictions that must be placed on the general model ^[See footnote 1] . All other parameter values are the same as the original simulation.
+
+```{r varyingeff-plot}
+varying_eff_plot = ggplot( data = varying_eff ) + 
+  geom_line( aes(x = effort , y = biased ) , 
+             color = 'red' ,
+             size = 1 ) + 
+  geom_line(aes(x = effort , y = unbiased) , 
+            size = 1) + 
+  labs( x = "Search/treatment intensity" , 
+        y = " Point estimate" , 
+        caption = "(Red line indicates the biased estimator.)") + 
+  theme( panel.background = element_rect(fill = 'white') , 
+         panel.grid = element_line( linetype = 2 , 
+                                    color = 'grey' ))
+
+varying_eff_plot
+```
+
+## Extensions of the simulation
+
+### Variable vacancy rate
+
+When I'd toyed with the idea of restricting the vacancy rate it made me wonder how I would get the simulation to pick a value for $v$ that wasn't the upper bound for $v \leq 1$ but also wasn't an arbitrary $(v_{max} - k)$, either. I ended up having $v$ be a uniform draw from the interval $v \in [1,v_{max}]$. That led to the notion of making the vacancies stochastic, by sampling an integer over the aforementioned interval.
+
+```{r stochvacancy}
+
+stochv_iter_function = function(i ,
+                                u = 1000 ,
+                                eff = 1.8 ,
+                                p_T =0.3 ,
+                                p_C = 0 ,
+                                alpha = 0.5 ){
+  
+  
+  prob_f = function(x){
+    rbinom(n = u ,
+           size = 1 , 
+           prob = x )
+  }
+  
+  # treatment economy
+  
+  ## "first stage" kind of process were treatment is assigned
+  
+  indiv_treat_df = tibble( 
+    u_t = prob_f(p_T) ,
+    u_c = (1-u_t) , 
+    effort = eff*u_t + u_c
+  )
+  
+  ## aggregates calculated from "first stage"
+  
+  agg_treat_df = indiv_treat_df %>%
+    summarise( n_treat = sum(u_t) , 
+               u_e = sum(effort) ) %>%
+    mutate( v = sample(1:floor(u_e*(1/eff)^(1/alpha) ) ,
+                       1 ) ,
+            theta = v / u_e ,
+            p_y = theta^alpha ,
+            exit_T = eff*p_y , 
+            exit_C = p_y , 
+            exit_C_untreated = (v/u)^alpha )
+  
+  ## now that we have aggregates, generate job matches based on (aggregate) probability of matching
+  
+  treat_df = indiv_treat_df %>% 
+    mutate( y = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C) ,
+            y_counter = prob_f(x = u_t*agg_treat_df$exit_T + u_c*agg_treat_df$exit_C_untreated)
+    )
+  
+  ## compute all of the outomes
+  
+  treat_outcomes = tibble( treated =
+                             treat_df %>%
+                             filter( u_t == 1 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           treated_rate = treated / agg_treat_df$n_treat ,
+                           untreated = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y) ) %>% 
+                             as.numeric() ,
+                           untreated_counter = treat_df %>%
+                             filter( u_t == 0 ) %>%
+                             summarise( sum(y_counter) ) %>% 
+                             as.numeric() ,
+                           untreated_rate = untreated / (u - agg_treat_df$n_treat ) ,
+                           untreated_counter_rate = untreated_counter / (u - agg_treat_df$n_treat )
+  )
+  
+  ## treatment effects
+  
+  treatment_effects = tibble( biased = (treat_outcomes$treated_rate - treat_outcomes$untreated_rate) ,
+                              unbiased = (treat_outcomes$treated_rate - treat_outcomes$untreated_counter_rate) ,
+                              lm_biased = summary(
+                                lm( data = treat_df , 
+                                           formula = y ~ u_t ))[["coefficients"]]["u_t","Estimate"] ,
+                              lm_unbiased = summary(
+                                lm( data = treat_df , 
+                                           formula = y_counter ~ u_t ))[["coefficients"]]["u_t","Estimate"] 
+  )
+  treatment_effects
+  
+}
+
+stochv_iter_df = map_df(1:10000 , stochv_iter_function )
+```
+
+Having vacancies be a stochastic process in this particular way doesn't have a substantial impact on the means, and there doesn't seem to be a change in the difference in the two means, either. Nonetheless it does change the left tail of the distribution a lot, making it a lot more-- well, uniform-looking.
+
+```{r stochvacancy-plot}
+ggplot( data = stochv_iter_df ) + 
+  geom_density(  aes( x = lm_biased ) ,
+                 fill = '#F8766D' ,
+                 color = '#F8766D' ,
+                 alpha = 0.6) +  
+  geom_density(  aes( x = lm_unbiased ) ,
+                 fill = '#00BFC4' ,
+                 color = '#00BFC4' ,
+                 alpha = 0.6) + 
+  geom_vline( xintercept = mean(stochv_iter_df$lm_unbiased) , 
+              color = '#00BFC4' )+ 
+  geom_vline( xintercept = mean(stochv_iter_df$lm_biased) , 
+              color = '#F8766D' ) + 
+  labs( x = "Estimate" , 
+        y = "Density" , 
+        caption = "(Distribution of biased estimates in red. Lines at the mean of the estimates.)")
+```
+
+
+## Concluding thoughts
+
+I've been looking into how the minimum wage impacts educational decisions, especially with regards to recent large-scale increases, and I think that this sort of thing represents a challenge here as well. Especially with local minimum wages; there is likely to be some spillovers that could either bias estimates, especially if other local areas are used in the contro group. In general, I do think that especially when we might think we're going to be messing around with an equilibrium like the labor market in this paper, we need to have our heads more in the space of thinking of displacement and these external costs. For example, I'd not thought about the spatial equilibrium sort of aspect of minimum wages, but if we hold all else equal then a large-scale minimum wage in a big city might actually raise some of these serious spillover concerns. 
+
+For example, I'd actually expect a *lot* of other states to be impacted in this way if, say, Kansas City raised its minimum wage to \$15 per hour suddenly. Alternatively, moving away from the minimum wage example-- whether some kind of large-scale change to a state Medicare program re-aligns incentives in ways that have spillovers on the market or risk pool of private insurance. In general perhaps a good lesson (at least one which I've drawn, when combined with my other learning experiences this year) is that we should expand our thinking about micro-level policies or programs to more aggregate-level prices, because those are going to almost surely cause these kinds of external costs (or benefits).
