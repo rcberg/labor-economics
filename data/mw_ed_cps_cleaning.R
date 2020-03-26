@@ -46,27 +46,32 @@ ddi = read_ipums_ddi("cps_00028.xml")
 #saveRDS(data, "cps_monthly_2000s.rds")
 data = readRDS("cps_monthly_2000s.rds")  %>% 
   select(-asecflag) %>% 
-  mutate_all( as.numeric) %>% as.data.table()
+  mutate_all( as.numeric) %>% 
+  mutate( max_school_age = ifelse( year < 2013 , 25 , 55 ) 
+  ) %>%
+  as.data.table()
 #
+
 data = data[,`:=`(woman = ifelse(sex == 2 , wtfinl , 0) ,
-               young = ifelse( age > 15 &
-                                 age < 20 , wtfinl , 0) , 
-               young_man = ifelse( age > 15 &
-                                     age < 20 & 
-                                     sex == 1 , wtfinl , 0) ,
-               in_labor_force = ifelse( labforce == 2 , wtfinl , 0) ,
-               civ_emp = ifelse( empstat == 10 , wtfinl , 0) , 
-               unemp = ifelse( empstat == 20 | empstat == 21 | empstat == 22 , wtfinl , 0 ) ,
-               unemp_new = ifelse( empstat == 22 , wtfinl , 0) ,
-               bach = ifelse( educ == 111 , wtfinl , 0 ) , 
-               some_coll = ifelse( educ == 81 , wtfinl , 0) ,
-               schoolage = ifelse( age > 15 &
-                                  age < 25 , wtfinl , 0) ,
-               hs_full = ifelse( schlcoll == 2 , wtfinl , 0) , 
-               hs_part = ifelse( schlcoll == 3 , wtfinl , 0) , 
-               uni_full = ifelse( schlcoll == 4 , wtfinl , 0)  ,
-               uni_part = ifelse( schlcoll == 5 , wtfinl , 0)) 
+                  young = ifelse( age > 15 &
+                                    age < 20 , wtfinl , 0) , 
+                  young_man = ifelse( age > 15 &
+                                        age < 20 & 
+                                        sex == 1 , wtfinl , 0) ,
+                  in_labor_force = ifelse( labforce == 2 , wtfinl , 0) ,
+                  civ_emp = ifelse( empstat == 10 , wtfinl , 0) , 
+                  unemp = ifelse( empstat == 20 | empstat == 21 | empstat == 22 , wtfinl , 0 ) ,
+                  unemp_new = ifelse( empstat == 22 , wtfinl , 0) ,
+                  bach = ifelse( educ == 111 , wtfinl , 0 ) , 
+                  some_coll = ifelse( educ == 81 , wtfinl , 0) ,
+                  schoolage = ifelse( age > 15 &
+                                          age < max_school_age , wtfinl , 0) , 
+                  hs_full = ifelse( schlcoll == 2 , wtfinl , 0) , 
+                  hs_part = ifelse( schlcoll == 3 , wtfinl , 0) , 
+                  uni_full = ifelse( schlcoll == 4 , wtfinl , 0)  ,
+                  uni_part = ifelse( schlcoll == 5 , wtfinl , 0)) 
             , ]
+
 
 saveRDS(data, "cps_monthly_plus_2000s_v2.rds")
 data = readRDS("cps_monthly_plus_2000s_v2.rds")
