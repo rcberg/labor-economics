@@ -1,0 +1,177 @@
+---
+title: "Education Choice After Seattle's Large Minimum Wage Increase"
+author: "Chris Berg"
+date: <br>`r format(Sys.time(), '%d %B %Y')`
+header-includes:
+  \usepackage{setspace}
+  \doublespacing
+output: pdf_document
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+
+library(pacman)
+p_load( tidyverse ,
+        lubridate ,
+        estimatr ,
+        future ,
+        plm ,
+        Synth ,
+        huxtable )
+
+data_has_hs_df = readRDS("D:/Economics/Projects/labor-economics/data/export/mw_ed_project_has_hs_pop_data.rds")
+reg_no_sea_hs_df = data_has_hs_df %>% filter( cbsa_code != 42660 )
+data_has_uni_df = readRDS("D:/Economics/Projects/labor-economics/data/export/mw_ed_project_has_uni_pop_data.rds")
+reg_no_sea_uni_df = data_has_uni_df %>% filter( cbsa_code != 42660 )
+
+synth_hs_data = 
+  readRDS("D:/Economics/Projects/labor-economics/data/export/synth_hs_results.rds") %>%
+  mutate( diff = actual_seattle - synthetic_seattle)
+
+synth_uni_data = 
+  readRDS("D:/Economics/Projects/labor-economics/data/export/synth_results.rds") %>%
+  mutate( diff = real_sea_pop - synth_sea_pop )
+
+plot_theme = 
+  theme( panel.background = element_rect( fill = 'white' ) , 
+         panel.grid.major = element_line( linetype = 2 , 
+                                    color = 'grey'))
+
+```
+
+## Introduction
+
+The topic of minimum wage effects has spilled more ink than almost any other topic in the economics literature (@card1994 , @neumark2000 , @card2000 alone have received thousands of citations) but few have studied very large minimum wage increases. The original @card1994 studied an increase in New Jersey's minimum wage from \$4.25 to \$5.05 -- an increase of 18% over the federal (and New Jersey's) statute. SeaTac, on the other hand, raised its minimum wage to \$15 in 2014; representing an increase of 63% over their previous level and 106% over the federal statute. 
+
+Very large minimum wage increases have been less-studied, and furthermore, most research has been directed towards evaluating employment effects. An early exception to this was @neumark1995 which examined the kinds of educational choices studied here. However, they examine state-level minimum wages, in a period (1977 to 1989) where there was comparatively less variation-- even in real terms- than we see today.
+
+Minimum wage changes-- especially large ones-- affect the trade-off between time spent working and time spent accumulating human capital in classes. Investments in education could be a normal good whose accumulation increases with income to the extent that--in response to the minimum wage hike-- it overshadows the incentive to substitute towards work. On the other hand, when minimum wage increases are especially large, it might incentivize more individuals to substitute into the labor force and forego years of education. 
+
+The present investigation makes use of difference-in-differences as well as synthetic control methods to try and come to a conclusion on which effect dominates. Ultimately, however, the evidence doesn't offer a straightforward answer as to which effect dominates on average. Diff-in-diff estimates as well as the results from a synthetic control analysis will be presented and discussed after a brief exposition and discussion of the data.
+
+## Data
+
+Since 2004, local areas had begun to increase their minimum wages above and beyond not just the federal level, but the level specified in their particular state statutes. The unit of analysis here will therefore be the Combined Statistical Area (CBSA), in order to capture this variation. Additionally, since a specific city raising their minimum wage above the state may represent exposure not just for residents of the city, but also residents of surrounding areas; using the CBSA should help capture this exposure effect.
+
+Detailed data on school enrollment for labor force eligible individuals are not publicly available in a format amenable to a panel data analysis. Fortunately, the Current Population Survey by the Bureau of Labor Statistics offers some limited demographic information as well as questions regarding enrollment in high school and college. While the is perhaps the finest data available for local level analysis, the BLS expanded their universe from respondents aged 16-26 before 2013 to ages 16 to 56 on and after 2013, creating a very large spike in reported enrollments. There doesn't seem to be an agreed-upon way to handle this problem, so the data will be used with this caveat.
+
+Data on these local minimum wages is conveniently compiled on Ben Zipperer's GitHub page. The format of these state and sub-state minimum wage data lets us analyze their effects at the CBSA-month level, since the CPS also offers their demographic and enrollment data at the monthly level. Combining these sources gives a CBSA-by-month panel on the age distribution of CBSAs (for defining the "school-age" population); the enrollment status of the population; and the binding or best-available minimum wage.
+
+
+## Analysis 
+
+The analysis will start with a basic two-way fixed effects difference-in-difference estimate of the binding local minimum wage on enrollment. In order for such estimates to have a causal interpretation, we need to assume that the trend in school enrollment wouldn't differ between CBSAs that experienced a minimum wage hike, and the CBSAs which did not. While this assumption can be probed by assessing trends in enrollment before treatment, once treatment occurs we can no longer directly assess this assumption, and there may be confounding factors that change enrollment around the same time as treatment. As a complement to the difference-in-differences estimate, a synthetic control estimate will be used to restrict the comparison to a weighted average of control units that best-share pre-treatment trends in enrollment.
+
+The first area to implement such a very large minimum wage increase was SeaTac-- a small suburb of Seattle named for the Seattle-Tacoma International Airport. The city of Seattle joined soon after. SeaTac as well as Seattle occupy the same CBSA, and since the CBSA is the unit of analysis used here, the greater Seattle CBSA is what will be classified as the treated unit for this analysis. The treatment indicator will be accordingly coded as occurring in January of 2014, when the minimum wage hike first occurred in SeaTac.
+
+The following specification will be used for the difference-in-differences portion of the analysis:
+
+$$ \text{EnrollmentShare}_{it} = \alpha + \beta_1 MW_{it} + \beta_2 MW_{it}*D_{it} + \delta_i + \gamma_t + \varepsilon_{it}$$
+
+"EnrollmentShare" is the fraction of school-aged individuals (see the Data section for this definition) in the CBSA $i$ at date $t$ who are enrolled in school, either "part time" or "full time."^[For all intents and purposes, "part-time" defines most high school enrollment in the CPS-- there are 10x as many individuals coded as "part-time" enrolled than "full-time." Nonetheless, their sum is used to compute total enrollment.] $D_{it}$ is an indicator that takes a value of one for the Seattle CBSA in the period after January of 2014. $MW_{it}$ is the local minimum wage. Because there were changes in local minimum wages before treatment is defined in the panel, the treatment dummy is interacted with $MW_{it}$ to specificatlly estimate the effect of the large increase occurring in 2014. $\delta_i$ and $\gamma_t$ are CBSA and date fixed effects. To account for serial correlation among CBSAs, $\varepsilon_{it}$ are clustered at the CBSA level for each diff-in-diff specification.
+
+## Preliminary Results
+
+```{r diffindiff-models, echo = F }
+
+model_sea_hs = 
+  lm_robust( 
+    data = data_has_hs_df , 
+    formula = in_hs_rate ~ binding_local_mw_n + seatac_treat:binding_local_mw_n , 
+    fixed_effects = ~ cbsa_code + date , 
+    clusters = cbsa_code 
+  )
+
+model_nosea_hs = 
+  lm_robust( 
+    data = reg_no_sea_hs_df , 
+    formula = in_hs_rate ~ binding_local_mw_n + placebo_treat:binding_local_mw_n , 
+    fixed_effects = ~ cbsa_code + date , 
+    clusters = cbsa_code 
+  )
+
+model_sea_uni = 
+  lm_robust( 
+    data = data_has_uni_df , 
+    formula = in_uni_rate_pop ~ binding_local_mw_n + seatac_treat:binding_local_mw_n, 
+    fixed_effects = ~ cbsa_code + date , 
+    clusters = cbsa_code 
+  )
+
+model_nosea_uni = 
+  lm_robust( 
+    data = reg_no_sea_uni_df , 
+    formula = in_uni_rate_pop ~ binding_local_mw_n + placebo_treat:binding_local_mw_n, 
+    fixed_effects = ~ cbsa_code + date , 
+    clusters = cbsa_code 
+  )
+
+```
+
+### Difference in differences
+
+Each of the difference-in-differences specificaions will use full CBSA and date fixed effects. To explore the robustness of these estimates, results will be presented using the same specification with a "placebo treatment" defined for all units after 2014 Jan., with the seattle CBSA dropped from the data. The first set of results will look at high school enrollment. The data is trimmed to only include CBSAs who report positive high school enrollment in the CPS.
+
+```{r did-hs-results, echo=F , warning=F}
+huxreg( model_sea_hs, model_nosea_hs,
+        coefs = c("MW" = "binding_local_mw_n" , 
+                  "MW*Treatment" = "binding_local_mw_n:seatac_treat",
+                  "MW*Placebo" = "binding_local_mw_n:placebo_treat") , 
+        stars = c(`*` = 0.1, `**` = 0.05, `***` = 0.01)) %>% set_caption( 'High School Enrollment')
+```
+
+Based on the difference-in-differences estimate, $\beta_2 = 0.002$ suggests that the minimum wage increase after 2014 in Seattle had a positive effect on enrollment in high school. A pure substitution effect would suggest an estimate of the opposite sign, but the positive sign could be reconciled with anticipatory effects; students may anticipate that after the minimum wage hike, them or their family could be better-situated to afford a college education in the future with such a high minimum wage. The most concrete statement to be made with these results is that there is some increase in Seattle HS enrollment after 2014 that doesn't appear to be present in other CBSAs. This result will be probed by conducting the same analysis as above, only using college enrollment (with the data trimmed in an analogous way).^[To circumvent questions over what is "college-aged" in an era of more non-traditional enrollment, I change the denominator to the CBSA population instead of the "school-aged" population.]
+
+```{r did-uni-results, echo=F , warning=F}
+huxreg( model_sea_uni, model_nosea_uni ,
+        coefs = c("MW" = "binding_local_mw_n" , 
+                  "MW*Treatment" = "binding_local_mw_n:seatac_treat",
+                  "MW*Placebo" = "binding_local_mw_n:placebo_treat") , 
+        stars = c(`*` = 0.1, `**` = 0.05, `***` = 0.01)) %>% set_caption( 'College Enrollment')
+```
+
+The results suggest that while minimum wage increases might have some general overall-positive effect, the increases in Seattle ca. 2014 may have had especially positive impacts on university enrollment. Again, borrowing the interpretaion from the previous results, at the very least we can say that there appears to be some increase in university enrollment in the Seattle CBSA which we don't necessarily see outside of it. If this is connected to the minimum wage, it could be consistent with the general narrative that college education has strong income effects, and an especially large minimum wage increase could be making higher education a more realistic possibility for many. 
+
+Despite the fact that the diff-in-diff estimates were significant when compared between Seattle and the rest of the US using a placebo test, this could still simply reflect a violation of the underlying diff-in-diff identifying assumption. To further interrogate this, a synthetic control analysis will be used to try and find a more suitable comparison for Seattle. @abadie2010 offers a rigorous treatment of the synthetic control as a reference, and how the method optimizes the comparison group. 
+
+### Synthetic control
+
+In the spirit of @abadie2010 the synthetic control method will be used to find an "optimal" comparison group for Seattle to assess the impact of the 2014 minimum wage hike on education outcomes. When looking at high school and college enrollment alike, the one-period lag of the enrollment rate will be used for matching to the control group. Finally, because areas in the SF Bay raised minimum wages shortly after Seattle, the primary Bay area CBSA is removed from the analysis. Like before, high school will be examined first and then college enrollment.
+
+```{r synth-hs, echo = F, dpi = 300, out.height='80%' , out.width='80%', fig.align='center'}
+ggplot( data = synth_hs_data ) + 
+  geom_line( aes( x = date , y = diff ) , 
+             size = 1) +
+  labs( title = "Seattle minimum wage and high school enrollment" ,
+        y = "Actual enrollment, less synthetic" , 
+        x = "Date" ) +
+  plot_theme
+```
+
+Just based on visual inspection, there seems to be very little (if any) of the substantial effect on high school enrollment that was seen in the diff-in-diff estimates. This offers some suggestive evidence that the diff-in-diff estimator may be contaminated by underlying trends that exist in certain CBSAs, but not in the US overall. Now, turning to synthetic control estimate for college enrollment. 
+
+A similar picture emerges from the college enrollment. Although actual Seattle seems to do a bit better than synthetic seattle after 2015, it's certainly not on an order large-enough to reconcile with the difference-in-differences estimate. Once again, evidence suggesting that the difference-in-differences might just be picking up some trend effects that are shared by these control units which *weren't* treated, but not the rest of the US. Visual inspection, at least, offers little convincing evidence that Seattle diverges from her synthetic counterpart in college enrollment.
+
+
+```{r synth-coll, echo = F, dpi = 300, out.height='80%' , out.width='80%', fig.align='center'}
+
+ggplot( data = synth_uni_data ) + 
+  geom_line( aes( x = date , y = diff ) , 
+             size = 1) +
+  labs( title = "Seattle minimum wage and college enrollment" ,
+        y = "Actual enrollment, less synthetic" , 
+        x = "Date" ) +
+  plot_theme
+```
+
+A last word on the synthetic control analysis: Synthetic control comparison, while intuitive, still doesn't enable us to actually test the parallel trends assumption. The control group is optimized to fit-- in this case-- the AR(1) time series of Seattle's enrollment, and this could be accomplished by averaging many different units whose trends do not look like Seattle's but when weighted and summed, do appear similar to Seattle's. Nonetheless, if there is some enrollment trend (perhaps being driven by some unaccounted-for policies that happen to be common among seemingly-unrelated CBSAs) then the synthetic control group might do a better job of picking that up. Despite uncertainty over the uncertainty of this estimator, the synthetic control estimates at least need to be formally tested by comparing the RMSPEs (a futher step that will be taken in the future).
+
+## Conclusion
+
+Difference-in-differences estimates suggests that the large minimum wage hike in Seattle may have had some positive effect on school enrollment. Comparing Seattle to her synthetic counterpart, however, casts some doubt on whether the increase exists at all, and if so, whether it is as large as the diff-in-diff estimator suggests. Resolving this contradiction is the goal for the immediate future. Drilling deeper into the microdata and leveraging some of the demographic covariates to predict school enrollment as a function of the best available local minimum wage would be a good first step that would be realistic with the data available. Outside of this, trying to find better data on enrollment than the CPS would be an obvious step to take. Theory suggests that the effect should depend on competing income and substitution effects, thus making the question an empirical problem-- but at this point, the effect is simply uncertain, at least in the absence of further analysis.
+
+\newpage
+## References
