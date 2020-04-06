@@ -4,7 +4,8 @@ p_load( tidyverse ,
         future , 
         hrbrthemes ,
         plm ,
-        Synth )
+        Synth ,
+        tictoc )
 
 
 data_has_uni_df = readRDS("data/export/mw_ed_project_has_uni_pop_data.rds")
@@ -64,11 +65,15 @@ synth_wa_pop = dataprep(
 
 plan("multiprocess")
 
+tic()
+
 synth_out_pop = synth(synth_wa_pop)
 synth_tab_pop = 
   synth.tab(
     dataprep.res = synth_wa_pop,
     synth.res = synth_out_pop)
+
+toc()
 
 synth_tabs_pop = 
   as.data.frame(synth_tab_pop["tab.w"]) %>%
@@ -99,7 +104,8 @@ synth_treatment_mspe =
           post = ifelse( date >= "2014-01-01" , 1 , 0 ) ) %>%
   group_by( post ) %>%
   summarise( mean_sq_pred_err = mean(sq_pred_err) ) %>%
-  mutate( rmspe = mean_sq_pred_err/dplyr::lag(mean_sq_pred_err) )
+  mutate( rmspe = mean_sq_pred_err/dplyr::lag(mean_sq_pred_err) , 
+          cbsa_code = 0 )
 
 
 ## synthetic control plot
@@ -114,3 +120,82 @@ ggplot( data = synthetic_seattle_pop_df ) +
 
 
 ### permutation test
+
+
+control_df =  
+  synth_df %>% 
+  filter( cbsa_code %in% donor_group )
+
+
+permutation_fn = function(i , controls = control_df , control_list = donor_group ){
+  
+  control_data = as.data.frame(controls) 
+  
+  controls_list_i = 
+    setdiff( control_list , i )
+  
+  synth_dataset_i = Synth::dataprep(
+    foo = synth_df , 
+    unit.variable = "cbsa_code" , 
+    dependent = "in_uni_rate_pop" , 
+    time.variable = "time_var" , 
+    treatment.identifier = i , 
+    controls.identifier = controls_list_i , 
+    special.predictors = spec_list_sa , 
+    time.predictors.prior = c(1:168),
+    time.optimize.ssr = c(1:168),
+    unit.names.variable = "msa_name" ,
+    time.plot = c(1:168)              
+  )
+  
+  synth_out_i = synth(synth_dataset_i)
+  
+  synth_tab_i = synth.tab(
+    dataprep.res = synth_dataset_i,
+    synth.res = synth_out_i)
+  
+  synthetic_i  = 
+    as.data.frame(synth_tab_i[["tab.w"]]) %>%
+    rename( synth_weights = "tab.w.w.weights" , 
+            msa_name = "tab.w.unit.names",
+            cbsa_code = "tab.w.unit.numbers")
+  
+  synthetic_i_data_df = 
+    left_join( controls , synthetic_i ) %>%
+    mutate( synth_weights = replace_na(synth_weights, 0) ,
+            uni_weight = synth_weights*in_uni_rate_pop ) %>%
+    group_by( date ) %>%
+    summarise( synth_est = sum(uni_weight)
+    ) %>%
+    cbind( actual = 
+             controls %>% 
+             filter( cbsa_code == i ) %>%
+             arrange( date ) %>%
+             select(in_uni_rate_pop , date) 
+    ) %>%
+    # gotta do some cleaning-up
+    select(-c("actual.date") ) %>%
+    rename( actual = "actual.in_uni_rate_pop"
+    )
+  
+  synth_treatment_mspe = synthetic_i_data_df %>%
+    mutate( sq_pred_err = (actual - synth_est)^2 ,
+            post = ifelse( date >= "2014-01-01" , 1 , 0 ) ) %>%
+    group_by( post ) %>%
+    summarise( mean_sq_pred_err = mean(sq_pred_err) ) %>%
+    mutate( rmspe = mean_sq_pred_err/dplyr::lag(mean_sq_pred_err) ,
+            cbsa_code = i)
+  
+  synth_treatment_mspe
+  
+}
+
+synth_rmspe = 
+  map_dfr( donor_group , permutation_fn ) %>%
+  bind_rows( synth_treatment_rmspe ) %>%
+  mutate( 
+    # using length of the data as denom because this data includes BOTH treated units so it's (length +1) -1 for other treated unit
+    p_value = 1-(rank(rmspe)/length(rmspe))  , 
+    treated = ifelse( cbsa_code == 42660 ,
+                      1 , 
+                      0 ) )
