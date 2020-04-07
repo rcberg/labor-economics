@@ -156,9 +156,9 @@ permutation_fn = function(i , controls = control_df , control_list = donor_group
   
   synthetic_i  = 
     as.data.frame(synth_tab_i[["tab.w"]]) %>%
-    rename( synth_weights = "tab.w.w.weights" , 
-            msa_name = "tab.w.unit.names",
-            cbsa_code = "tab.w.unit.numbers")
+    rename( synth_weights = w.weights , 
+            msa_name = unit.names,
+            cbsa_code = unit.numbers)
   
   synthetic_i_data_df = 
     left_join( controls , synthetic_i ) %>%
