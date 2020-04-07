@@ -1,11 +1,12 @@
 library(pacman)
 p_load( tidyverse ,
         lubridate ,
-        future , 
+        future ,
+        furrr ,
         hrbrthemes ,
         plm ,
         Synth ,
-        tictoc )
+        tictoc  )
 
 
 data_has_uni_df = readRDS("data/export/mw_ed_project_has_uni_pop_data.rds")
@@ -63,7 +64,7 @@ synth_wa_pop = dataprep(
   time.plot = c(1:168)              
 )
 
-plan("multiprocess")
+plan(multiprocess)
 
 tic()
 
@@ -190,8 +191,10 @@ permutation_fn = function(i , controls = control_df , control_list = donor_group
   
 }
 
+plan(multiprocess)
+
 synth_rmspe = 
-  map_dfr( donor_group , permutation_fn ) %>%
+  future_map_dfr( donor_group , permutation_fn , .progress = T ) %>%
   bind_rows( synth_treatment_rmspe ) %>%
   mutate( 
     # using length of the data as denom because this data includes BOTH treated units so it's (length +1) -1 for other treated unit
