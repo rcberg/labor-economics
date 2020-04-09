@@ -202,3 +202,51 @@ synth_rmspe =
     treated = ifelse( cbsa_code == 42660 ,
                       1 , 
                       0 ) )
+
+
+### loading synthetic control permutation test
+
+
+perm_cluster_10 = readRDS("data/export/permutation_df_cluster10.rds")
+perm_cluster_1_13 = readRDS("data/export/permutation_df.rds")
+
+permutation_df = 
+  bind_rows( perm_cluster_10 , 
+             perm_cluster_1_13 ) 
+
+control_rmspe_df = 
+  permutation_df %>%
+  group_by( cbsa_code ) %>%
+  mutate( rmspe = 
+            mean_sq_pred_err / dplyr::lag( mean_sq_pred_err , order_by = post ) ) %>% 
+  na.omit() %>%
+  select(cbsa_code , rmspe ) %>%
+  mutate( treated = 0 ) %>%
+  left_join( synth_df %>%
+               filter( time_var == 0 ) %>%
+               select(cbsa_code , msa_name) )
+
+### loading treatment 
+
+treatment_rmspe_df = 
+  readRDS( "data/export/synth_seattle_pop_uni_pop.rds") %>%
+  mutate( sq_pred_err = (actual_seattle - synthetic_seattle)^2 ,
+          post = ifelse( date >= "2014-01-01" , 1 , 0 ) ) %>%
+  group_by( post ) %>%
+  summarise( mean_sq_pred_err = mean(sq_pred_err) ) %>%
+  mutate( rmspe = mean_sq_pred_err/dplyr::lag(mean_sq_pred_err) , 
+          cbsa_code = 42660 ) %>%
+  na.omit() %>%
+  select( cbsa_code , rmspe ) %>%
+  mutate( treated = 1 ) %>%
+  left_join( synth_df %>%
+               filter( time_var == 0 ) %>%
+               select(cbsa_code , msa_name) )
+
+
+
+### rmspe 
+
+pvalue_df = 
+  bind_rows( treatment_rmspe_df , control_rmspe_df ) %>% 
+  mutate( p_value = 1 - rank(rmspe)/length(rmspe) ) 
