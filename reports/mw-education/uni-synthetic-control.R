@@ -10,6 +10,8 @@ p_load( tidyverse ,
 
 
 data_has_uni_df = readRDS("data/export/mw_ed_project_has_uni_pop_data.rds")
+measure_shock_adj = readRDS("data/export/uni_rate_measure_shock.rds")
+
 
 # synthetic control analysis
 
@@ -27,7 +29,10 @@ force_balance =
           in_uni_rate_sa ,
           lag_uni_rate_pop , 
           lag_uni_rate_sa
-  )
+  ) %>%
+  left_join( measure_shock_adj ) %>%
+  mutate(dummy = ifelse(date < "2013-01-01" , 1 , 0 ),
+         adjusted_uni = in_uni_rate_pop + dummy*post_int)
 
 
 synth_df = as.data.frame(force_balance)
@@ -80,7 +85,15 @@ synth_tabs_pop =
   as.data.frame(synth_tab_pop["tab.w"]) %>%
   rename( synth_weights = "tab.w.w.weights" , 
           msa_name = "tab.w.unit.names",
-          cbsa_code = "tab.w.unit.numbers")
+          cbsa_code = "tab.w.unit.numbers") %>%
+  arrange(desc(synth_weights))
+
+synth_counties = 
+  synth_tabs_pop %>% 
+  head(15) %>%
+  select( -cbsa_code )
+
+#saveRDS(synth_counties , "data/export/synth_county_weights.rds")
 
 synthetic_seattle_pop_df = 
   left_join( synth_df , synth_tabs_pop %>% select(cbsa_code , synth_weights) ) %>%
@@ -250,3 +263,5 @@ treatment_rmspe_df =
 pvalue_df = 
   bind_rows( treatment_rmspe_df , control_rmspe_df ) %>% 
   mutate( p_value = 1 - rank(rmspe)/length(rmspe) ) 
+
+saveRDS( pvalue_df , "data/export/uni_synth_inference_df.rds")

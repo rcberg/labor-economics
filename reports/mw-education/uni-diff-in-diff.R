@@ -8,13 +8,17 @@ p_load( tidyverse ,
         )
 
 data_has_uni_df = readRDS("data/export/mw_ed_project_has_uni_pop_data.rds")
+measure_shock_adj = readRDS("data/export/uni_rate_measure_shock.rds")
 
 # difference in differences, basic
 
 force_balance = 
   make.pbalanced(data_has_uni_df , balance.type = c("shared.individuals") , index = c("cbsa_code" , "time_var" ) ) %>%
   as.data.frame() %>%
-  filter(  cbsa_code != 41940 )
+  filter(  cbsa_code != 41940 ) %>%
+  left_join( measure_shock_adj ) %>%
+  mutate(dummy = ifelse(date < "2013-01-01" , 1 , 0 ),
+         adjusted_uni_rate = in_uni_rate_pop + dummy*post_int)
 
 nosea_uni_df = 
   force_balance %>%
@@ -23,7 +27,7 @@ nosea_uni_df =
 model_sea_uni = 
   lm_robust( 
     data = force_balance , 
-    formula = in_uni_rate_pop ~ binding_local_mw_n + seatac_treat:binding_local_mw_n, 
+    formula = adjusted_uni_rate ~ binding_local_mw_n + seatac_treat:binding_local_mw_n, 
     fixed_effects = ~ cbsa_code + date , 
     clusters = cbsa_code 
   )
@@ -31,7 +35,7 @@ model_sea_uni =
 model_sea_uni_std = 
   lm_robust( 
     data = force_balance , 
-    formula = scale(in_uni_rate_pop) ~ scale(binding_local_mw_n) + seatac_treat:scale(binding_local_mw_n), 
+    formula = scale(adjusted_uni_rate) ~ scale(binding_local_mw_n) + seatac_treat:scale(binding_local_mw_n), 
     fixed_effects = ~ cbsa_code + date , 
     clusters = cbsa_code 
   )
@@ -123,7 +127,7 @@ p_value_df =
           p_unstand = unstand_rank/(1 + length(unstandardized))
           )
 
-saveRDS(p_value_df, "data/export/uni_inference_df.rds")
+saveRDS(p_value_df, "data/export/uni_did_inference_df.rds")
 
 library(hrbrthemes)
 
