@@ -10,6 +10,8 @@ p_load( tidyverse ,
 
 
 data_has_uni_df = readRDS("data/export/mw_ed_project_has_uni_pop_data.rds")
+measure_shock_adj = readRDS("data/export/uni_rate_measure_shock.rds")
+
 
 # synthetic control analysis
 
@@ -27,7 +29,10 @@ force_balance =
           in_uni_rate_sa ,
           lag_uni_rate_pop , 
           lag_uni_rate_sa
-  )
+  ) %>%
+  left_join( measure_shock_adj ) %>%
+  mutate(dummy = ifelse(date < "2013-01-01" , 1 , 0 ),
+         adjusted_uni = in_uni_rate_pop + dummy*post_int)
 
 
 synth_df = as.data.frame(force_balance)
@@ -80,7 +85,15 @@ synth_tabs_pop =
   as.data.frame(synth_tab_pop["tab.w"]) %>%
   rename( synth_weights = "tab.w.w.weights" , 
           msa_name = "tab.w.unit.names",
-          cbsa_code = "tab.w.unit.numbers")
+          cbsa_code = "tab.w.unit.numbers") %>%
+  arrange(desc(synth_weights))
+
+synth_counties = 
+  synth_tabs_pop %>% 
+  head(15) %>%
+  select( -cbsa_code )
+
+#saveRDS(synth_counties , "data/export/synth_county_weights.rds")
 
 synthetic_seattle_pop_df = 
   left_join( synth_df , synth_tabs_pop %>% select(cbsa_code , synth_weights) ) %>%
@@ -202,3 +215,53 @@ synth_rmspe =
     treated = ifelse( cbsa_code == 42660 ,
                       1 , 
                       0 ) )
+
+
+### loading synthetic control permutation test
+
+
+perm_cluster_10 = readRDS("data/export/permutation_df_cluster10.rds")
+perm_cluster_1_13 = readRDS("data/export/permutation_df.rds")
+
+permutation_df = 
+  bind_rows( perm_cluster_10 , 
+             perm_cluster_1_13 ) 
+
+control_rmspe_df = 
+  permutation_df %>%
+  group_by( cbsa_code ) %>%
+  mutate( rmspe = 
+            mean_sq_pred_err / dplyr::lag( mean_sq_pred_err , order_by = post ) ) %>% 
+  na.omit() %>%
+  select(cbsa_code , rmspe ) %>%
+  mutate( treated = 0 ) %>%
+  left_join( synth_df %>%
+               filter( time_var == 0 ) %>%
+               select(cbsa_code , msa_name) )
+
+### loading treatment 
+
+treatment_rmspe_df = 
+  readRDS( "data/export/synth_seattle_pop_uni_pop.rds") %>%
+  mutate( sq_pred_err = (actual_seattle - synthetic_seattle)^2 ,
+          post = ifelse( date >= "2014-01-01" , 1 , 0 ) ) %>%
+  group_by( post ) %>%
+  summarise( mean_sq_pred_err = mean(sq_pred_err) ) %>%
+  mutate( rmspe = mean_sq_pred_err/dplyr::lag(mean_sq_pred_err) , 
+          cbsa_code = 42660 ) %>%
+  na.omit() %>%
+  select( cbsa_code , rmspe ) %>%
+  mutate( treated = 1 ) %>%
+  left_join( synth_df %>%
+               filter( time_var == 0 ) %>%
+               select(cbsa_code , msa_name) )
+
+
+
+### rmspe 
+
+pvalue_df = 
+  bind_rows( treatment_rmspe_df , control_rmspe_df ) %>% 
+  mutate( p_value = 1 - rank(rmspe)/length(rmspe) ) 
+
+saveRDS( pvalue_df , "data/export/uni_synth_inference_df.rds")
